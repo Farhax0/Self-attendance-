@@ -7,9 +7,10 @@ Tap the link on your Android phone, open the downloaded `SelfAttendance.apk`, an
 A simple web app for employees to record daily attendance.
 
 - **Check In / Check Out** buttons save the exact time.
-- **Daily income** = hours worked × hourly rate.
+- **Salary**: set Monthly, Daily or Hourly salary plus your shift in/out time. Pay = hours worked × hourly rate.
 - **Calendar** on the home screen: green = full day, orange = half day, red = absent.
-- Settings let you change the hourly rate and the hours needed for a full day or half day.
+- **Manual edit**: tap any date to set in/out times or mark Full / Half / Absent / Clear. Mark the whole month Full day (skipping Sundays) or clear the month in one tap.
+- Blue gradient design.
 
 To use it online, turn on GitHub Pages (Settings → Pages → deploy from this branch) and open the link.
 Records are saved in your browser on that device.
