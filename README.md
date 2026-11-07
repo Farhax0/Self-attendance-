@@ -9,3 +9,7 @@ A simple web app for employees to record daily attendance.
 
 To use it online, turn on GitHub Pages (Settings → Pages → deploy from this branch) and open the link.
 Records are saved in your browser on that device.
+
+## Android APK
+
+Every push builds an APK with GitHub Actions. To download it: open the **Actions** tab → the latest **Build APK** run → **Artifacts** → `SelfAttendance-apk`. Unzip it and install `app-debug.apk` on your phone (allow "Install unknown apps").
