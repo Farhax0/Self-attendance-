@@ -1,5 +1,9 @@
 # Self Attendance
 
+## 📱 [Download the Android APK](https://github.com/Farhax0/Self-attendance-/releases/latest/download/SelfAttendance.apk)
+
+Tap the link on your Android phone, open the downloaded `SelfAttendance.apk`, and allow "Install unknown apps" when asked.
+
 A simple web app for employees to record daily attendance.
 
 - **Check In / Check Out** buttons save the exact time.
@@ -9,7 +13,3 @@ A simple web app for employees to record daily attendance.
 
 To use it online, turn on GitHub Pages (Settings → Pages → deploy from this branch) and open the link.
 Records are saved in your browser on that device.
-
-## Android APK
-
-Every push builds an APK with GitHub Actions. To download it: open the **Actions** tab → the latest **Build APK** run → **Artifacts** → `SelfAttendance-apk`. Unzip it and install `app-debug.apk` on your phone (allow "Install unknown apps").
