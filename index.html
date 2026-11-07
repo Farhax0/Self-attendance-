@@ -2,99 +2,193 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b2a6f">
 <title>Self Attendance</title>
 <style>
-  * { box-sizing: border-box; }
-  body { margin: 0; font-family: system-ui, sans-serif; color: #0f172a; min-height: 100vh;
-         background: linear-gradient(160deg, #0b2a6f 0%, #1d4ed8 45%, #38bdf8 100%) fixed; }
-  .wrap { max-width: 480px; margin: 0 auto; padding: 16px; }
-  h1 { font-size: 22px; margin: 4px 0 12px; color: #fff; }
-  .card { background: rgba(255,255,255,.96); border-radius: 14px; padding: 14px; margin-bottom: 14px; box-shadow: 0 4px 14px rgba(0,0,0,.18); }
-  .hero { background: linear-gradient(135deg, #1e40af, #3b82f6); color: #fff; }
-  .hero .stat b { color: #fff; }
+  :root {
+    --glass: rgba(255,255,255,.13);
+    --glass-strong: rgba(255,255,255,.22);
+    --edge: rgba(255,255,255,.38);
+    --text: #fff;
+    --muted: rgba(255,255,255,.72);
+    --green: #22c55e; --orange: #f59e0b; --red: #ef4444;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; min-height: 100vh; color: var(--text);
+    font-family: -apple-system, "SF Pro Display", "Segoe UI", Roboto, system-ui, sans-serif;
+    background: linear-gradient(160deg, #0a2a7a 0%, #1442b8 35%, #2563eb 70%, #38bdf8 100%) fixed;
+    overflow-x: hidden;
+  }
+  /* soft floating light blobs behind the glass */
+  body::before, body::after {
+    content: ""; position: fixed; border-radius: 50%; filter: blur(60px); z-index: -1; pointer-events: none;
+  }
+  body::before { width: 320px; height: 320px; top: -80px; left: -90px; background: rgba(56,189,248,.55); }
+  body::after { width: 360px; height: 360px; bottom: -120px; right: -120px; background: rgba(129,140,248,.5); }
+
+  .wrap { max-width: 480px; margin: 0 auto; padding: 18px 16px 32px; }
+
+  /* liquid glass frame */
+  .glass {
+    position: relative; border-radius: 22px; padding: 16px; margin-bottom: 16px;
+    background: linear-gradient(145deg, rgba(186,230,253,.26), rgba(96,165,250,.10));
+    -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%);
+    border: 1px solid rgba(255,255,255,.18);
+    box-shadow: 0 10px 34px rgba(2,12,48,.38), inset 0 1px 0 rgba(255,255,255,.45), inset 0 -1px 0 rgba(255,255,255,.08);
+  }
+  /* glossy gradient frame around every card */
+  .glass::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.5px; pointer-events: none;
+    background: linear-gradient(135deg, rgba(255,255,255,.75), rgba(255,255,255,.08) 40%, rgba(125,211,252,.55) 100%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+  }
+
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .logo { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; padding: 0; margin: 0; }
+  header h1 { font-size: 22px; margin: 0; letter-spacing: .2px; }
+  header p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+
+  .clock { font-size: 34px; font-weight: 700; letter-spacing: .5px; }
+  .date { color: var(--muted); font-size: 14px; margin-bottom: 10px; }
+  .stat { font-size: 14px; line-height: 1.7; }
+  .stat b { color: #fff; }
+  .title { font-weight: 700; font-size: 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .note { font-size: 12px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+  .mt { margin-top: 10px; }
+  .hidden { display: none !important; }
+
   .row { display: flex; gap: 8px; align-items: end; flex-wrap: wrap; }
   .row > * { flex: 1; min-width: 0; }
-  button { padding: 11px; border: 0; border-radius: 8px; font-size: 15px; font-weight: 600; color: #fff; cursor: pointer;
-           background: linear-gradient(135deg, #1d4ed8, #3b82f6); }
-  button:disabled { opacity: .4; cursor: default; }
-  .in { background: linear-gradient(135deg, #15803d, #22c55e); }
-  .out { background: linear-gradient(135deg, #b91c1c, #ef4444); }
-  .half-b { background: linear-gradient(135deg, #c2410c, #f59e0b); }
-  .ghost { background: #e2e8f0; color: #1e3a8a; }
-  .nav { padding: 6px 12px; flex: 0; }
-  input, select { padding: 8px; border: 1px solid #93c5fd; border-radius: 6px; font-size: 15px; width: 100%; background: #fff; }
-  label { font-size: 12px; color: #475569; display: block; margin-bottom: 2px; }
-  .cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; color: #1e3a8a; }
-  .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
-  .dow { font-size: 12px; color: #64748b; font-weight: 600; }
-  .day { padding: 8px 0; border-radius: 6px; font-size: 14px; background: #eff6ff; cursor: pointer; }
-  .full { background: #22c55e; color: #fff; } .half { background: #f59e0b; color: #fff; } .absent { background: #ef4444; color: #fff; }
-  .today { outline: 2px solid #1e3a8a; }
-  .sel { box-shadow: 0 0 0 3px #38bdf8; }
-  .legend { display: flex; gap: 12px; font-size: 12px; margin-top: 8px; }
-  .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; background: var(--c); }
-  .stat { font-size: 14px; line-height: 1.7; }
-  .big { font-size: 20px; font-weight: 700; }
-  .title { font-weight: 700; color: #1e3a8a; margin-bottom: 8px; }
-  .note { font-size: 12px; color: #64748b; margin-top: 6px; }
-  .mt { margin-top: 8px; }
-  .hidden { display: none; }
+
+  button {
+    padding: 12px; border-radius: 14px; font-size: 15px; font-weight: 600; color: #fff; cursor: pointer;
+    border: 1px solid rgba(255,255,255,.35);
+    background: linear-gradient(145deg, rgba(255,255,255,.28), rgba(255,255,255,.08));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 4px 14px rgba(2,12,48,.25);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    transition: transform .1s, opacity .2s;
+  }
+  button:active { transform: scale(.97); }
+  button:disabled { opacity: .35; cursor: default; transform: none; }
+  .in { background: linear-gradient(145deg, rgba(34,197,94,.85), rgba(21,128,61,.75)); }
+  .out { background: linear-gradient(145deg, rgba(239,68,68,.85), rgba(185,28,28,.75)); }
+  .half-b { background: linear-gradient(145deg, rgba(245,158,11,.9), rgba(194,65,12,.75)); }
+  .blue { background: linear-gradient(145deg, rgba(59,130,246,.9), rgba(29,78,216,.8)); }
+  .nav { padding: 7px 14px; flex: 0; border-radius: 12px; }
+  .big-btn { padding: 15px; font-size: 16px; }
+
+  input, select {
+    padding: 10px; border-radius: 12px; font-size: 15px; width: 100%; color: #fff;
+    border: 1px solid rgba(255,255,255,.3); background: rgba(255,255,255,.12);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,.15);
+  }
+  input:focus, select:focus { outline: 2px solid rgba(125,211,252,.8); }
+  select option { color: #0f172a; background: #fff; }
+  label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; }
+
+  /* toggle switch */
+  .switch { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px; color: #fff; margin: 0; }
+  .switch input { display: none; }
+  .switch .knob { width: 50px; height: 30px; border-radius: 30px; background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.35); position: relative; flex: none; transition: background .2s; }
+  .switch .knob::after { content: ""; position: absolute; width: 24px; height: 24px; border-radius: 50%; top: 2px; left: 2px; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.3); transition: left .2s; }
+  .switch input:checked + .knob { background: rgba(34,197,94,.85); }
+  .switch input:checked + .knob::after { left: 22px; }
+
+  .cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
+  .dow { font-size: 12px; color: var(--muted); font-weight: 600; padding-bottom: 2px; }
+  .day {
+    padding: 9px 0; border-radius: 11px; font-size: 14px; cursor: pointer;
+    background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.14);
+  }
+  .full { background: linear-gradient(145deg, rgba(34,197,94,.95), rgba(21,128,61,.85)); border-color: rgba(255,255,255,.35); }
+  .half { background: linear-gradient(145deg, rgba(245,158,11,.95), rgba(194,65,12,.85)); border-color: rgba(255,255,255,.35); }
+  .absent { background: linear-gradient(145deg, rgba(239,68,68,.95), rgba(185,28,28,.85)); border-color: rgba(255,255,255,.35); }
+  .today { box-shadow: 0 0 0 2px #fff; }
+  .sel { box-shadow: 0 0 0 3px #7dd3fc; }
+  .legend { display: flex; gap: 14px; font-size: 12px; margin-top: 10px; color: var(--muted); }
+  .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; background: var(--c); }
+
+  .chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .chip { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18); border-radius: 14px; padding: 8px; text-align: center; }
+  .chip b { display: block; font-size: 18px; }
+  .chip small { color: var(--muted); font-size: 11px; }
+  .earned { font-size: 15px; margin-top: 10px; }
+  .earned b { font-size: 20px; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); padding: 10px 16px; border-radius: 14px;
+    background: rgba(15,23,42,.75); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,.25); font-size: 14px; opacity: 0; transition: opacity .3s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Self Attendance</h1>
+  <header>
+    <div class="glass logo">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4M8 15l2.5 2.5L16 13"/></svg>
+    </div>
+    <div><h1>Self Attendance</h1><p>Track time, attendance &amp; salary</p></div>
+  </header>
 
-  <div class="card hero">
-    <div id="clock" class="big"></div>
+  <div class="glass">
+    <div class="clock" id="clock"></div>
+    <div class="date" id="dateLabel"></div>
     <div id="todayInfo" class="stat"></div>
     <div class="row mt">
-      <button class="in" id="btnIn">Check In</button>
-      <button class="out" id="btnOut">Check Out</button>
+      <button class="in big-btn" id="btnIn">Check In</button>
+      <button class="out big-btn" id="btnOut">Check Out</button>
     </div>
   </div>
 
-  <div class="card">
+  <div class="glass">
     <div class="cal-head">
-      <button class="nav" id="prev">&lt;</button>
+      <button class="nav" id="prev" aria-label="Previous month">&lsaquo;</button>
       <strong id="monthLabel"></strong>
-      <button class="nav" id="next">&gt;</button>
+      <button class="nav" id="next" aria-label="Next month">&rsaquo;</button>
     </div>
     <div class="grid" id="cal"></div>
     <div class="legend">
-      <span style="--c:#22c55e">Full day</span>
-      <span style="--c:#f59e0b">Half day</span>
-      <span style="--c:#ef4444">Absent</span>
+      <span style="--c:var(--green)">Full day</span>
+      <span style="--c:var(--orange)">Half day</span>
+      <span style="--c:var(--red)">Absent</span>
     </div>
-    <div id="monthTotal" class="stat mt"></div>
+    <div class="chips mt" id="chips"></div>
+    <div class="earned" id="earned"></div>
     <div class="row mt">
-      <button id="fillMonth">Mark month Full day</button>
-      <button class="ghost" id="clearMonth">Clear month</button>
+      <button class="blue" id="fillMonth">Mark month Full</button>
+      <button id="clearMonth">Clear month</button>
     </div>
-    <label class="mt"><input type="checkbox" id="skipSun" checked style="width:auto"> Skip Sundays when marking month</label>
+    <label class="switch mt">Skip Sundays when marking month
+      <input type="checkbox" id="skipSun" checked><span class="knob"></span></label>
   </div>
 
-  <div class="card hidden" id="editCard">
-    <div class="title">Edit attendance — <span id="editDate"></span></div>
+  <div class="glass hidden" id="editCard">
+    <div class="title">Edit attendance · <span id="editDate"></span></div>
     <div id="editInfo" class="stat"></div>
     <div class="row mt">
       <div><label>In time</label><input type="time" id="editIn"></div>
       <div><label>Out time</label><input type="time" id="editOut"></div>
-      <button id="saveEdit" style="flex-basis:100%">Save times</button>
     </div>
+    <button class="blue mt" id="saveEdit" style="width:100%">Save times</button>
     <div class="row mt">
       <button class="in" id="markFull">Full</button>
       <button class="half-b" id="markHalf">Half</button>
       <button class="out" id="markAbsent">Absent</button>
-      <button class="ghost" id="markClear">Clear</button>
+      <button id="markClear">Clear</button>
     </div>
   </div>
 
-  <div class="card">
+  <div class="glass">
     <div class="title">Salary &amp; Shift</div>
     <div class="row">
-      <div><label>Salary amount</label><input type="number" id="salary" min="0" step="0.01"></div>
+      <div><label>Salary amount</label><input type="number" id="salary" min="0" step="0.01" inputmode="decimal"></div>
       <div><label>Salary type</label>
         <select id="salaryType">
           <option value="monthly">Monthly</option>
@@ -107,19 +201,43 @@
       <div><label>Shift out time</label><input type="time" id="shiftOut"></div>
     </div>
     <div id="rateInfo" class="stat mt"></div>
-    <div class="note">Pay = hours worked × hourly rate. Full day = worked at least shift hours minus 30 min. Half day = at least half the shift.</div>
+    <div class="note">Pay = hours worked × hourly rate. Full day = at least shift hours minus 30 min. Half day = at least half the shift.</div>
+  </div>
+
+  <div class="glass">
+    <div class="title">Notifications</div>
+    <label class="switch">Shift reminder 1 hour before in time
+      <input type="checkbox" id="remind"><span class="knob"></span></label>
+    <div class="note" id="remindNote">A permanent notification appears 1 hour before your shift and stays until you check in. After check in it shows your in time until you check out.</div>
+  </div>
+
+  <div class="glass">
+    <div class="title">Export data</div>
+    <label>Range</label>
+    <select id="exportScope">
+      <option value="month">Month shown in calendar</option>
+      <option value="all">All records</option>
+    </select>
+    <div class="row mt">
+      <button class="blue" id="expCsv">CSV</button>
+      <button class="blue" id="expXlsx">Excel</button>
+      <button class="blue" id="expPdf">PDF</button>
+    </div>
+    <div class="note">Files are saved to your Downloads folder.</div>
   </div>
 </div>
+<div class="toast" id="toast"></div>
 
 <script>
 const $ = id => document.getElementById(id);
+const A = window.Android || null;  // native bridge inside the Android app
 const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
 const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
 
 let records = load('att_records', {});  // { "YYYY-MM-DD": { in: ms, out: ms } or { absent: true } }
 let old = load('att_settings', {});
 let settings = Object.assign({ salary: old.rate ?? 15000, salaryType: old.rate != null ? 'hourly' : 'monthly',
-                               shiftIn: '09:00', shiftOut: '18:00' }, old);
+                               shiftIn: '09:00', shiftOut: '18:00', remind: false }, old);
 delete settings.rate; delete settings.fullHrs; delete settings.halfHrs;
 let view = new Date(); view.setDate(1);
 let selected = null;
@@ -130,6 +248,11 @@ const fmtTime = ms => new Date(ms).toLocaleTimeString([], { hour: '2-digit', min
 const hhmm = ms => { const d = new Date(ms); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 const money = n => n.toFixed(2);
 const mins = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2500);
+}
 
 function shiftHours() {
   let d = mins(settings.shiftOut) - mins(settings.shiftIn);
@@ -143,7 +266,7 @@ function hourlyRate(k) {
   const [y, m] = k.split('-').map(Number);
   return s / (new Date(y, m, 0).getDate() * sh);
 }
-// build a timestamp from a date key + "HH:MM"; out times before in times roll to next day
+// timestamp from a date key + "HH:MM"; an out time before the in time rolls to the next day
 function stamp(k, t, after) {
   let ms = new Date(`${k}T${t}`).getTime();
   if (after != null && ms <= after) ms += 86400000;
@@ -162,13 +285,14 @@ function status(k) {
   if (h >= sh / 2) return 'half';
   return 'absent';
 }
+const STATUS_NAME = { full: 'Full day', half: 'Half day', absent: 'Absent' };
 
 function describe(k) {
   const r = records[k];
-  if (r && r.absent) return `<b>${k}</b>: Marked absent · Pay: <b>0.00</b>`;
-  if (!r || !r.in) return `<b>${k}</b>: No record`;
-  return `<b>${k}</b><br>In: ${fmtTime(r.in)} &nbsp; Out: ${r.out ? fmtTime(r.out) : '—'}<br>` +
-         `Hours: ${hours(r).toFixed(2)} &nbsp; Pay: <b>${money(income(k, r))}</b>`;
+  if (r && r.absent) return `Marked absent · Pay <b>0.00</b>`;
+  if (!r || !r.in) return `No record`;
+  return `In <b>${fmtTime(r.in)}</b> &nbsp;·&nbsp; Out <b>${r.out ? fmtTime(r.out) : '—'}</b><br>` +
+         `Hours <b>${hours(r).toFixed(2)}</b> &nbsp;·&nbsp; Pay <b>${money(income(k, r))}</b>`;
 }
 
 function persist() { save('att_records', records); render(); }
@@ -194,23 +318,25 @@ function renderCal() {
     html += `<div class="day ${s} ${k === today ? 'today' : ''} ${k === selected ? 'sel' : ''}" data-k="${k}">${d}</div>`;
   }
   $('cal').innerHTML = html;
-  $('monthTotal').innerHTML = `Full: ${full} &nbsp; Half: ${half} &nbsp; Absent: ${absent} &nbsp; Hours: ${hrs.toFixed(1)}<br>` +
-                              `Month salary earned: <b>${money(total)}</b>`;
+  $('chips').innerHTML = `<div class="chip"><b>${full}</b><small>Full</small></div>` +
+                         `<div class="chip"><b>${half}</b><small>Half</small></div>` +
+                         `<div class="chip"><b>${absent}</b><small>Absent</small></div>`;
+  $('earned').innerHTML = `Hours ${hrs.toFixed(1)} &nbsp;·&nbsp; Earned <b>${money(total)}</b>`;
 }
 
 function renderEdit() {
   $('editCard').classList.toggle('hidden', !selected);
   if (!selected) return;
   const r = records[selected] || {};
-  $('editDate').textContent = selected;
+  $('editDate').textContent = new Date(selected + 'T00:00').toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
   $('editInfo').innerHTML = describe(selected);
   $('editIn').value = r.in ? hhmm(r.in) : settings.shiftIn;
   $('editOut').value = r.out ? hhmm(r.out) : (r.in ? '' : settings.shiftOut);
 }
 
 function renderRate() {
-  const k = key(new Date()), hr = hourlyRate(k), sh = shiftHours();
-  $('rateInfo').innerHTML = `Shift: ${sh.toFixed(2)} h &nbsp; Hourly: <b>${money(hr)}</b> &nbsp; Per day: <b>${money(hr * sh)}</b>`;
+  const hr = hourlyRate(key(new Date())), sh = shiftHours();
+  $('rateInfo').innerHTML = `Shift <b>${sh.toFixed(2)} h</b> &nbsp;·&nbsp; Hourly <b>${money(hr)}</b> &nbsp;·&nbsp; Per day <b>${money(hr * sh)}</b>`;
 }
 
 function render() { renderToday(); renderCal(); renderEdit(); renderRate(); }
@@ -220,32 +346,50 @@ function setDay(k, inT, outT) {
   records[k] = outT ? { in: i, out: stamp(k, outT, i) } : { in: i };
 }
 
-$('btnIn').onclick = () => { records[key(new Date())] = { in: Date.now() }; persist(); };
-$('btnOut').onclick = () => { records[key(new Date())].out = Date.now(); persist(); };
+// ---- notification bridge ----
+function syncNative() {
+  if (!A) return;
+  A.setReminder(!!settings.remind, settings.shiftIn);
+  const k = key(new Date()), r = records[k];
+  if (r && r.in && !r.out) A.checkedIn(k, fmtTime(r.in));
+  else if (r && r.out) A.checkedOut(k);
+}
+
+$('btnIn').onclick = () => {
+  const k = key(new Date()); records[k] = { in: Date.now() }; persist();
+  if (A) A.checkedIn(k, fmtTime(records[k].in));
+  toast('Checked in at ' + fmtTime(records[k].in));
+};
+$('btnOut').onclick = () => {
+  const k = key(new Date()); records[k].out = Date.now(); persist();
+  if (A) A.checkedOut(k);
+  toast('Checked out · Pay ' + money(income(k, records[k])));
+};
 $('prev').onclick = () => { view.setMonth(view.getMonth() - 1); render(); };
 $('next').onclick = () => { view.setMonth(view.getMonth() + 1); render(); };
 $('cal').onclick = e => { const k = e.target.dataset.k; if (k) { selected = selected === k ? null : k; render(); } };
 
 $('saveEdit').onclick = () => {
-  if (!$('editIn').value) return alert('Enter an in time');
-  setDay(selected, $('editIn').value, $('editOut').value); persist();
+  if (!$('editIn').value) return toast('Enter an in time');
+  setDay(selected, $('editIn').value, $('editOut').value); persist(); syncNative(); toast('Saved');
 };
-$('markFull').onclick = () => { setDay(selected, settings.shiftIn, settings.shiftOut); persist(); };
+$('markFull').onclick = () => { setDay(selected, settings.shiftIn, settings.shiftOut); persist(); syncNative(); };
 $('markHalf').onclick = () => {
   const i = stamp(selected, settings.shiftIn);
-  records[selected] = { in: i, out: i + shiftHours() / 2 * 3600000 }; persist();
+  records[selected] = { in: i, out: i + shiftHours() / 2 * 3600000 }; persist(); syncNative();
 };
 $('markAbsent').onclick = () => { records[selected] = { absent: true }; persist(); };
 $('markClear').onclick = () => { delete records[selected]; persist(); };
 
 $('fillMonth').onclick = () => {
   const y = view.getFullYear(), m = view.getMonth(), days = new Date(y, m + 1, 0).getDate();
+  let n = 0;
   for (let d = 1; d <= days; d++) {
     const dt = new Date(y, m, d), k = key(dt);
     if (records[k] || ($('skipSun').checked && dt.getDay() === 0)) continue;
-    setDay(k, settings.shiftIn, settings.shiftOut);
+    setDay(k, settings.shiftIn, settings.shiftOut); n++;
   }
-  persist();
+  persist(); syncNative(); toast(`Marked ${n} days as Full day`);
 };
 $('clearMonth').onclick = () => {
   if (!confirm('Clear all attendance for this month?')) return;
@@ -260,12 +404,179 @@ $('clearMonth').onclick = () => {
     const v = $(id).value;
     settings[id] = id === 'salary' ? (parseFloat(v) || 0) : (v || settings[id]);
     save('att_settings', settings); render();
+    if (id === 'shiftIn') syncNative();
   };
 });
 
-const tick = () => $('clock').textContent = new Date().toLocaleString();
+$('remind').checked = !!settings.remind;
+$('remind').onchange = () => {
+  settings.remind = $('remind').checked; save('att_settings', settings);
+  if (!A) { toast('Notifications work in the Android app'); return; }
+  syncNative();
+  toast(settings.remind ? `Reminder set for ${fmtTime(stamp(key(new Date()), settings.shiftIn) - 3600000)} daily` : 'Reminder off');
+};
+if (!A) $('remindNote').textContent += ' (Available in the Android app.)';
+
+// ---- export ----
+const HEAD = ['Date', 'Day', 'Status', 'In', 'Out', 'Hours', 'Pay'];
+const enc = s => new TextEncoder().encode(s);
+
+function exportData() {
+  let keys;
+  if ($('exportScope').value === 'month') {
+    const y = view.getFullYear(), m = view.getMonth(), n = new Date(y, m + 1, 0).getDate();
+    keys = Array.from({ length: n }, (_, i) => key(new Date(y, m, i + 1)));
+  } else keys = Object.keys(records).sort();
+  const rows = keys.map(k => {
+    const r = records[k] || {}, s = status(k);
+    return [k, new Date(k + 'T00:00').toLocaleDateString('en', { weekday: 'short' }),
+            STATUS_NAME[s] || (r.in ? 'In progress' : '-'),
+            r.in ? hhmm(r.in) : '', r.out ? hhmm(r.out) : '',
+            +hours(r).toFixed(2), +income(k, r).toFixed(2)];
+  });
+  const count = s => rows.filter(r => r[2] === s).length;
+  const tot = { full: count('Full day'), half: count('Half day'), absent: count('Absent'),
+                hours: rows.reduce((a, r) => a + r[5], 0), pay: rows.reduce((a, r) => a + r[6], 0) };
+  const label = $('exportScope').value === 'month' ? view.toLocaleString('en', { month: 'long', year: 'numeric' }) : 'All records';
+  const file = 'attendance-' + ($('exportScope').value === 'month' ? key(view).slice(0, 7) : 'all');
+  return { rows, tot, label, file };
+}
+const totalRow = t => ['Total', '', `Full ${t.full} / Half ${t.half} / Absent ${t.absent}`, '', '', +t.hours.toFixed(2), +t.pay.toFixed(2)];
+
+function toCSV({ rows, tot }) {
+  const q = v => { v = String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+  return enc('﻿' + [HEAD, ...rows, totalRow(tot)].map(r => r.map(q).join(',')).join('\r\n'));
+}
+
+// minimal .xlsx writer (uncompressed zip)
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = b => { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+function concat(parts) {
+  const out = new Uint8Array(parts.reduce((a, p) => a + p.length, 0)); let o = 0;
+  parts.forEach(p => { out.set(p, o); o += p.length; }); return out;
+}
+function zip(files) {
+  const parts = [], central = []; let off = 0;
+  for (const [name, text] of Object.entries(files)) {
+    const n = enc(name), d = enc(text), c = crc32(d);
+    const h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(12, 0x21, true);
+    h.setUint32(14, c, true); h.setUint32(18, d.length, true); h.setUint32(22, d.length, true); h.setUint16(26, n.length, true);
+    parts.push(new Uint8Array(h.buffer), n, d);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(14, 0x21, true);
+    ch.setUint32(16, c, true); ch.setUint32(20, d.length, true); ch.setUint32(24, d.length, true); ch.setUint16(28, n.length, true);
+    ch.setUint32(42, off, true);
+    central.push(new Uint8Array(ch.buffer), n);
+    off += 30 + n.length + d.length;
+  }
+  const cs = central.reduce((a, b) => a + b.length, 0), cnt = Object.keys(files).length;
+  const e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, cnt, true); e.setUint16(10, cnt, true); e.setUint32(12, cs, true); e.setUint32(16, off, true);
+  return concat([...parts, ...central, new Uint8Array(e.buffer)]);
+}
+function toXLSX({ rows, tot, label }) {
+  const x = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const cell = (v, ref, s) => typeof v === 'number'
+    ? `<c r="${ref}" s="${s}"><v>${v}</v></c>`
+    : `<c r="${ref}" s="${s}" t="inlineStr"><is><t>${x(v)}</t></is></c>`;
+  const all = [[`Self Attendance Report - ${label}`], HEAD, ...rows, totalRow(tot)];
+  const last = all.length;
+  const sheet = all.map((r, i) => `<row r="${i + 1}">${r.map((v, j) =>
+    cell(v, String.fromCharCode(65 + j) + (i + 1), i === 0 ? 3 : i === 1 ? 1 : i === last - 1 ? 2 : (j >= 5 ? 4 : 0))).join('')}</row>`).join('');
+  const X = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  const NS = 'http://schemas.openxmlformats.org';
+  return zip({
+    '[Content_Types].xml': `${X}<Types xmlns="${NS}/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`,
+    '_rels/.rels': `${X}<Relationships xmlns="${NS}/package/2006/relationships"><Relationship Id="rId1" Type="${NS}/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`,
+    'xl/workbook.xml': `${X}<workbook xmlns="${NS}/spreadsheetml/2006/main" xmlns:r="${NS}/officeDocument/2006/relationships"><sheets><sheet name="Attendance" sheetId="1" r:id="rId1"/></sheets></workbook>`,
+    'xl/_rels/workbook.xml.rels': `${X}<Relationships xmlns="${NS}/package/2006/relationships"><Relationship Id="rId1" Type="${NS}/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="${NS}/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`,
+    'xl/styles.xml': `${X}<styleSheet xmlns="${NS}/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="0.00"/></numFmts><fonts count="4"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="14"/><color rgb="FF1E3A8A"/><name val="Calibri"/></font></fonts><fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1D4ED8"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFDBEAFE"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="5"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="164" fontId="2" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1" applyNumberFormat="1"/><xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`,
+    'xl/worksheets/sheet1.xml': `${X}<worksheet xmlns="${NS}/spreadsheetml/2006/main"><cols><col min="1" max="1" width="13" customWidth="1"/><col min="2" max="2" width="8" customWidth="1"/><col min="3" max="3" width="28" customWidth="1"/><col min="4" max="7" width="11" customWidth="1"/></cols><sheetData>${sheet}</sheetData></worksheet>`
+  });
+}
+
+// minimal PDF writer (A4, Helvetica)
+function toPDF({ rows, tot, label }) {
+  const esc = s => String(s).replace(/[\\()]/g, m => '\\' + m).replace(/[^\x20-\x7e]/g, '?');
+  const X = [40, 112, 152, 232, 297, 362, 432];
+  const pages = []; let ops = [], y = 0;
+  const txt = (x, yy, s, f = 'F1', sz = 10) => ops.push(`BT /${f} ${sz} Tf ${x} ${yy} Td (${esc(s)}) Tj ET`);
+  const header = () => {
+    ops.push(`0.11 0.31 0.85 rg 36 ${y - 6} 523 20 re f 1 1 1 rg`);
+    HEAD.forEach((h, i) => txt(X[i], y, h, 'F2'));
+    ops.push('0 0 0 rg'); y -= 22;
+  };
+  const newPage = first => {
+    if (ops.length) pages.push(ops.join('\n'));
+    ops = []; y = 800;
+    if (first) {
+      ops.push('0.04 0.16 0.44 rg 0 782 595 60 re f 1 1 1 rg');
+      txt(40, 806, 'Self Attendance Report', 'F2', 20);
+      ops.push('0 0 0 rg'); y = 755;
+      txt(40, y, label, 'F2', 13); y -= 26;
+    }
+    header();
+  };
+  newPage(true);
+  rows.forEach((r, i) => {
+    if (y < 60) newPage(false);
+    if (i % 2 === 0) ops.push(`0.92 0.95 1 rg 36 ${y - 5} 523 17 re f 0 0 0 rg`);
+    r.forEach((v, j) => txt(X[j], y, j >= 5 ? Number(v).toFixed(2) : v));
+    y -= 17;
+  });
+  if (y < 110) newPage(false);
+  y -= 14;
+  ops.push(`0.86 0.92 1 rg 36 ${y - 52} 523 66 re f 0 0 0 rg`);
+  txt(46, y, `Full days: ${tot.full}    Half days: ${tot.half}    Absent: ${tot.absent}`, 'F2', 11);
+  txt(46, y - 20, `Total hours: ${tot.hours.toFixed(2)}`, 'F2', 11);
+  txt(46, y - 40, `Total pay: ${tot.pay.toFixed(2)}`, 'F2', 11);
+  pages.push(ops.join('\n'));
+
+  const objs = ['<< /Type /Catalog /Pages 2 0 R >>', '',
+                '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+                '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>'];
+  const kids = [];
+  pages.forEach((c, i) => {
+    const p = 5 + i * 2; kids.push(`${p} 0 R`);
+    objs[p - 1] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${p + 1} 0 R >>`;
+    objs[p] = `<< /Length ${c.length} >>\nstream\n${c}\nendstream`;
+  });
+  objs[1] = `<< /Type /Pages /Kids [${kids.join(' ')}] /Count ${pages.length} >>`;
+  let out = '%PDF-1.4\n'; const offs = [];
+  objs.forEach((o, i) => { offs.push(out.length); out += `${i + 1} 0 obj\n${o}\nendobj\n`; });
+  const xref = out.length;
+  out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n` + offs.map(o => String(o).padStart(10, '0') + ' 00000 n \n').join('');
+  out += `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  return enc(out);
+}
+
+function deliver(name, mime, bytes) {
+  if (A && A.saveFile) {
+    let s = '';
+    for (let i = 0; i < bytes.length; i += 8192) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+    A.saveFile(name, mime, btoa(s));
+    return;
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([bytes], { type: mime }));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  toast('Downloaded ' + name);
+}
+$('expCsv').onclick = () => { const d = exportData(); deliver(d.file + '.csv', 'text/csv', toCSV(d)); };
+$('expXlsx').onclick = () => { const d = exportData(); deliver(d.file + '.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', toXLSX(d)); };
+$('expPdf').onclick = () => { const d = exportData(); deliver(d.file + '.pdf', 'application/pdf', toPDF(d)); };
+window.appToast = toast;  // lets the Android side show messages
+
+const tick = () => {
+  const n = new Date();
+  $('clock').textContent = n.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  $('dateLabel').textContent = n.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+};
 setInterval(tick, 1000); tick();
 render();
+syncNative();
 </script>
 </body>
 </html>
