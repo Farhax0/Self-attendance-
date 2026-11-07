@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Self Attendance</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, sans-serif; background: #f3f4f6; color: #111; }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 22px; margin: 4px 0 12px; }
+  .card { background: #fff; border-radius: 12px; padding: 14px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row > * { flex: 1; }
+  button { padding: 12px; border: 0; border-radius: 8px; font-size: 16px; font-weight: 600; color: #fff; cursor: pointer; }
+  button:disabled { opacity: .4; cursor: default; }
+  .in { background: #16a34a; } .out { background: #dc2626; } .gray { background: #6b7280; padding: 6px 10px; flex: 0; }
+  input { padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; width: 100%; }
+  label { font-size: 13px; color: #555; }
+  .cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+  .dow { font-size: 12px; color: #666; font-weight: 600; }
+  .day { padding: 8px 0; border-radius: 6px; font-size: 14px; background: #f9fafb; cursor: pointer; }
+  .full { background: #22c55e; color: #fff; } .half { background: #f59e0b; color: #fff; } .absent { background: #ef4444; color: #fff; }
+  .today { outline: 2px solid #111; }
+  .legend { display: flex; gap: 12px; font-size: 12px; margin-top: 8px; }
+  .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; background: var(--c); }
+  .stat { font-size: 14px; line-height: 1.7; }
+  .big { font-size: 20px; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Self Attendance</h1>
+
+  <div class="card">
+    <div id="clock" class="big"></div>
+    <div id="todayInfo" class="stat"></div>
+    <div class="row" style="margin-top:10px">
+      <button class="in" id="btnIn">Check In</button>
+      <button class="out" id="btnOut">Check Out</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="cal-head">
+      <button class="gray" id="prev">&lt;</button>
+      <strong id="monthLabel"></strong>
+      <button class="gray" id="next">&gt;</button>
+    </div>
+    <div class="grid" id="cal"></div>
+    <div class="legend">
+      <span style="--c:#22c55e">Full day</span>
+      <span style="--c:#f59e0b">Half day</span>
+      <span style="--c:#ef4444">Absent</span>
+    </div>
+    <div id="dayDetail" class="stat" style="margin-top:10px"></div>
+    <div id="monthTotal" class="stat"></div>
+  </div>
+
+  <div class="card">
+    <strong>Settings</strong>
+    <div class="row" style="margin-top:8px">
+      <div><label>Hourly rate</label><input type="number" id="rate" min="0" step="0.01"></div>
+      <div><label>Full day (hours)</label><input type="number" id="fullHrs" min="1" step="0.5"></div>
+      <div><label>Half day (hours)</label><input type="number" id="halfHrs" min="0" step="0.5"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+let records = load('att_records', {});   // { "YYYY-MM-DD": { in: ms, out: ms } }
+let settings = load('att_settings', { rate: 100, fullHrs: 8, halfHrs: 4 });
+let view = new Date(); view.setDate(1);
+let selected = null;
+
+const key = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const fmtTime = ms => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+const hours = r => r && r.in && r.out ? (r.out - r.in) / 3600000 : 0;
+const income = r => hours(r) * settings.rate;
+const money = n => n.toFixed(2);
+
+function status(dateKey) {
+  const r = records[dateKey];
+  if (!r || !r.in) return dateKey < key(new Date()) ? 'absent' : '';
+  if (!r.out) return '';
+  const h = hours(r);
+  if (h >= settings.fullHrs) return 'full';
+  if (h >= settings.halfHrs) return 'half';
+  return 'absent';
+}
+
+function describe(k) {
+  const r = records[k];
+  if (!r || !r.in) return `<b>${k}</b>: No record`;
+  return `<b>${k}</b><br>In: ${fmtTime(r.in)} &nbsp; Out: ${r.out ? fmtTime(r.out) : '—'}<br>` +
+         `Hours: ${hours(r).toFixed(2)} &nbsp; Income: <b>${money(income(r))}</b>`;
+}
+
+function renderToday() {
+  const k = key(new Date()), r = records[k] || {};
+  $('btnIn').disabled = !!r.in;
+  $('btnOut').disabled = !r.in || !!r.out;
+  $('todayInfo').innerHTML = describe(k);
+}
+
+function renderCal() {
+  const y = view.getFullYear(), m = view.getMonth();
+  $('monthLabel').textContent = view.toLocaleString([], { month: 'long', year: 'numeric' });
+  let html = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => `<div class="dow">${d}</div>`).join('');
+  const first = new Date(y, m, 1).getDay(), days = new Date(y, m + 1, 0).getDate();
+  html += '<div></div>'.repeat(first);
+  const today = key(new Date());
+  let total = 0, full = 0, half = 0, absent = 0;
+  for (let d = 1; d <= days; d++) {
+    const k = key(new Date(y, m, d)), s = status(k);
+    total += income(records[k]);
+    if (s === 'full') full++; else if (s === 'half') half++; else if (s === 'absent') absent++;
+    html += `<div class="day ${s} ${k === today ? 'today' : ''}" data-k="${k}">${d}</div>`;
+  }
+  $('cal').innerHTML = html;
+  $('monthTotal').innerHTML = `Full: ${full} &nbsp; Half: ${half} &nbsp; Absent: ${absent}<br>Month income: <b>${money(total)}</b>`;
+  $('dayDetail').innerHTML = selected ? describe(selected) : '';
+}
+
+function render() { renderToday(); renderCal(); }
+
+$('btnIn').onclick = () => { records[key(new Date())] = { in: Date.now() }; save('att_records', records); render(); };
+$('btnOut').onclick = () => { const r = records[key(new Date())]; r.out = Date.now(); save('att_records', records); render(); };
+$('prev').onclick = () => { view.setMonth(view.getMonth() - 1); render(); };
+$('next').onclick = () => { view.setMonth(view.getMonth() + 1); render(); };
+$('cal').onclick = e => { if (e.target.dataset.k) { selected = e.target.dataset.k; renderCal(); } };
+
+['rate', 'fullHrs', 'halfHrs'].forEach(id => {
+  $(id).value = settings[id];
+  $(id).oninput = () => { settings[id] = parseFloat($(id).value) || 0; save('att_settings', settings); render(); };
+});
+
+setInterval(() => $('clock').textContent = new Date().toLocaleString(), 1000);
+$('clock').textContent = new Date().toLocaleString();
+render();
+</script>
+</body>
+</html>
